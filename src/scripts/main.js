@@ -1,9 +1,15 @@
 'use strict';
 
-const ANIMATION_DURATION = 320;
-const EFFECT_DURATION = 320;
+const ANIMATION_DURATION = 120;
+const EFFECT_DURATION = 120;
 
-const game = new window.Game();
+const GameClass = window.Game;
+
+if (!GameClass) {
+  throw new Error('Game class is not available');
+}
+
+const game = new GameClass();
 const boardElement = document.querySelector('.game-board');
 const tileLayer = document.querySelector('.tile-layer');
 const cells = Array.from(document.querySelectorAll('.field-cell'));
@@ -12,8 +18,9 @@ const button = document.querySelector('.button');
 const startMessage = document.querySelector('.message-start');
 const winMessage = document.querySelector('.message-win');
 const loseMessage = document.querySelector('.message-lose');
-
 let isAnimating = false;
+let moveTimeoutId = 0;
+let effectTimeoutId = 0;
 
 function getPositionKey(row, col) {
   return `${row}:${col}`;
@@ -92,6 +99,14 @@ function clearTileLayer() {
   tileLayer.innerHTML = '';
 }
 
+function finishAnimation() {
+  window.clearTimeout(moveTimeoutId);
+  window.clearTimeout(effectTimeoutId);
+  clearTileLayer();
+  renderBoard();
+  isAnimating = false;
+}
+
 function getCellRect(row, col) {
   const cell = cells[row * 4 + col];
   const boardRect = boardElement.getBoundingClientRect();
@@ -161,20 +176,16 @@ function animateEffects(moveMeta) {
   const effectTiles = [];
 
   moveMeta.merged.forEach(({ row, col, value }) => {
-    const tile = createTileElement(value, row, col, 'tile--merge');
-
-    effectTiles.push(tile);
+    effectTiles.push(createTileElement(value, row, col, 'tile--merge'));
   });
 
   moveMeta.spawned.forEach(({ row, col, value }) => {
-    const tile = createTileElement(value, row, col, 'tile--new');
-
-    effectTiles.push(tile);
+    effectTiles.push(createTileElement(value, row, col, 'tile--new'));
   });
 
   effectTiles.forEach((tile) => tileLayer.append(tile));
 
-  window.setTimeout(() => {
+  effectTimeoutId = window.setTimeout(() => {
     clearTileLayer();
     renderBoard();
     isAnimating = false;
@@ -193,9 +204,7 @@ function animateMove(moveMeta, onMoveEnd) {
   }
 
   movingTiles.forEach(({ from, value }) => {
-    const tile = createTileElement(value, from.row, from.col);
-
-    tileLayer.append(tile);
+    tileLayer.append(createTileElement(value, from.row, from.col));
   });
 
   prepareTilesForAnimation(Array.from(tileLayer.children));
@@ -209,7 +218,7 @@ function animateMove(moveMeta, onMoveEnd) {
     });
   });
 
-  window.setTimeout(() => {
+  moveTimeoutId = window.setTimeout(() => {
     clearTileLayer();
     onMoveEnd(getEffectHiddenPositions(moveMeta));
     animateEffects(moveMeta);
@@ -289,15 +298,13 @@ button.addEventListener('click', () => {
   if (button.classList.contains('start')) {
     game.start();
     renderScoreAndStatus();
-
     playAnimations(Array.from({ length: 4 }, () => Array(4).fill(0)));
 
     return;
   }
 
   game.restart();
-  isAnimating = false;
-  clearTileLayer();
+  finishAnimation();
   setButtonMode('start');
   render();
 });
@@ -305,8 +312,12 @@ button.addEventListener('click', () => {
 document.addEventListener('keydown', (keyEvent) => {
   const gameStatus = game.getStatus();
 
-  if (gameStatus !== 'playing' || isAnimating) {
+  if (gameStatus !== 'playing') {
     return;
+  }
+
+  if (isAnimating) {
+    finishAnimation();
   }
 
   handleMove(keyEvent.key);

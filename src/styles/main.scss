@@ -95,8 +95,8 @@ body {
   top: 0;
   left: 0;
   transition:
-    transform 320ms ease-in-out,
-    opacity 320ms ease-in-out;
+    transform 120ms ease-in-out,
+    opacity 120ms ease-in-out;
   will-change: transform, opacity;
 }
 
@@ -109,11 +109,11 @@ body {
 }
 
 .tile-content.tile--new {
-  animation: tile-appear 180ms ease-out;
+  animation: tile-appear 120ms ease-out;
 }
 
 .tile-content.tile--merge {
-  animation: tile-merge 180ms ease-out;
+  animation: tile-merge 120ms ease-out;
 }
 
 .game-field {
