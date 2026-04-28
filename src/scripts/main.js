@@ -291,18 +291,22 @@ function handleMove(key) {
 }
 
 button.addEventListener('click', () => {
-  if (button.classList.contains('start')) {
+  if (!game.started) {
     game.start();
+
     setButtonMode('restart');
     renderScoreAndStatus();
+
     playAnimations(Array.from({ length: 4 }, () => Array(4).fill(0)));
 
     return;
   }
 
   game.restart();
+
   finishAnimation();
   setButtonMode('start');
+  renderScoreAndStatus();
   render();
 });
 
