@@ -281,10 +281,6 @@ function handleMove(key) {
 
   moveAction();
 
-  if (game.getLastMove().changed) {
-    setButtonMode('restart');
-  }
-
   renderScoreAndStatus();
 
   if (game.getLastMove().changed) {
@@ -297,6 +293,7 @@ function handleMove(key) {
 button.addEventListener('click', () => {
   if (button.classList.contains('start')) {
     game.start();
+    setButtonMode('restart');
     renderScoreAndStatus();
     playAnimations(Array.from({ length: 4 }, () => Array(4).fill(0)));
 
