@@ -1,15 +1,12 @@
 'use strict';
 
+import Game from '../modules/Game.class.js';
+
 const ANIMATION_DURATION = 120;
 const EFFECT_DURATION = 120;
 
-const GameClass = window.Game;
+const game = new Game();
 
-if (!GameClass) {
-  throw new Error('Game class is not available');
-}
-
-const game = new GameClass();
 const boardElement = document.querySelector('.game-board');
 const tileLayer = document.querySelector('.tile-layer');
 const cells = Array.from(document.querySelectorAll('.field-cell'));
@@ -18,6 +15,7 @@ const button = document.querySelector('.button');
 const startMessage = document.querySelector('.message-start');
 const winMessage = document.querySelector('.message-win');
 const loseMessage = document.querySelector('.message-lose');
+
 let isAnimating = false;
 let moveTimeoutId = 0;
 let effectTimeoutId = 0;
@@ -100,8 +98,8 @@ function clearTileLayer() {
 }
 
 function finishAnimation() {
-  window.clearTimeout(moveTimeoutId);
-  window.clearTimeout(effectTimeoutId);
+  clearTimeout(moveTimeoutId);
+  clearTimeout(effectTimeoutId);
   clearTileLayer();
   renderBoard();
   isAnimating = false;
@@ -132,6 +130,7 @@ function createTileElement(value, row, col, extraClass = '') {
 
   content.className = `tile-content field-cell--${value} ${extraClass}`.trim();
   content.textContent = value;
+
   tile.append(content);
 
   return tile;
@@ -145,47 +144,47 @@ function prepareTilesForAnimation(tiles) {
   });
 }
 
-function getEffectHiddenPositions(moveMeta) {
-  const hiddenPositions = new Set();
-
-  moveMeta.merged.forEach(({ row, col }) => {
-    hiddenPositions.add(getPositionKey(row, col));
-  });
-
-  moveMeta.spawned.forEach(({ row, col }) => {
-    hiddenPositions.add(getPositionKey(row, col));
-  });
-
-  return hiddenPositions;
-}
-
 function getAnimatedTiles(moveMeta) {
   const mergedTargets = new Set(
     moveMeta.merged.map(({ row, col }) => `${row}:${col}`),
   );
 
   return moveMeta.moved.filter(({ from, to }) => {
-    const hasMoved = from.row !== to.row || from.col !== to.col;
-    const isMergeTarget = mergedTargets.has(`${to.row}:${to.col}`);
+    const moved = from.row !== to.row || from.col !== to.col;
+    const merge = mergedTargets.has(`${to.row}:${to.col}`);
 
-    return hasMoved || isMergeTarget;
+    return moved || merge;
   });
 }
 
+function getEffectHiddenPositions(moveMeta) {
+  const hidden = new Set();
+
+  moveMeta.merged.forEach(({ row, col }) => {
+    hidden.add(getPositionKey(row, col));
+  });
+
+  moveMeta.spawned.forEach(({ row, col }) => {
+    hidden.add(getPositionKey(row, col));
+  });
+
+  return hidden;
+}
+
 function animateEffects(moveMeta) {
-  const effectTiles = [];
+  const tiles = [];
 
   moveMeta.merged.forEach(({ row, col, value }) => {
-    effectTiles.push(createTileElement(value, row, col, 'tile--merge'));
+    tiles.push(createTileElement(value, row, col, 'tile--merge'));
   });
 
   moveMeta.spawned.forEach(({ row, col, value }) => {
-    effectTiles.push(createTileElement(value, row, col, 'tile--new'));
+    tiles.push(createTileElement(value, row, col, 'tile--new'));
   });
 
-  effectTiles.forEach((tile) => tileLayer.append(tile));
+  tiles.forEach((t) => tileLayer.append(t));
 
-  effectTimeoutId = window.setTimeout(() => {
+  effectTimeoutId = setTimeout(() => {
     clearTileLayer();
     renderBoard();
     isAnimating = false;
@@ -210,15 +209,15 @@ function animateMove(moveMeta, onMoveEnd) {
   prepareTilesForAnimation(Array.from(tileLayer.children));
 
   requestAnimationFrame(() => {
-    movingTiles.forEach(({ to }, index) => {
-      const tile = tileLayer.children[index];
+    movingTiles.forEach(({ to }, i) => {
+      const tile = tileLayer.children[i];
       const rect = getCellRect(to.row, to.col);
 
       tile.style.transform = `translate(${rect.x}px, ${rect.y}px)`;
     });
   });
 
-  moveTimeoutId = window.setTimeout(() => {
+  moveTimeoutId = setTimeout(() => {
     clearTileLayer();
     onMoveEnd(getEffectHiddenPositions(moveMeta));
     animateEffects(moveMeta);
@@ -226,17 +225,17 @@ function animateMove(moveMeta, onMoveEnd) {
 }
 
 function getHiddenPositions(moveMeta) {
-  const hiddenPositions = new Set();
+  const hidden = new Set();
 
   getAnimatedTiles(moveMeta).forEach(({ from }) => {
-    hiddenPositions.add(getPositionKey(from.row, from.col));
+    hidden.add(getPositionKey(from.row, from.col));
   });
 
   moveMeta.spawned.forEach(({ row, col }) => {
-    hiddenPositions.add(getPositionKey(row, col));
+    hidden.add(getPositionKey(row, col));
   });
 
-  return hiddenPositions;
+  return hidden;
 }
 
 function playAnimations(previousState) {
@@ -250,13 +249,13 @@ function playAnimations(previousState) {
   clearTileLayer();
   renderBoard(previousState, getHiddenPositions(moveMeta));
 
-  animateMove(moveMeta, (hiddenPositions) => {
-    renderBoard(game.getState(), hiddenPositions);
+  animateMove(moveMeta, (hidden) => {
+    renderBoard(game.getState(), hidden);
   });
 }
 
 function handleMove(key) {
-  const moveByKey = {
+  const actions = {
     ArrowLeft: () => game.moveLeft(),
     ArrowRight: () => game.moveRight(),
     ArrowUp: () => game.moveUp(),
@@ -271,29 +270,28 @@ function handleMove(key) {
     S: () => game.moveDown(),
   };
 
-  const moveAction = moveByKey[key];
+  const action = actions[key];
 
-  if (!moveAction) {
+  if (!action) {
     return;
   }
 
-  const previousState = game.getState();
+  const prev = game.getState();
 
-  moveAction();
+  action();
 
   renderScoreAndStatus();
 
   if (game.getLastMove().changed) {
-    playAnimations(previousState);
+    playAnimations(prev);
   } else {
     renderBoard();
   }
 }
 
 button.addEventListener('click', () => {
-  if (!game.started) {
+  if (game.getStatus() === 'idle') {
     game.start();
-
     setButtonMode('restart');
     renderScoreAndStatus();
 
@@ -303,17 +301,14 @@ button.addEventListener('click', () => {
   }
 
   game.restart();
-
   finishAnimation();
   setButtonMode('start');
   renderScoreAndStatus();
   render();
 });
 
-document.addEventListener('keydown', (keyEvent) => {
-  const gameStatus = game.getStatus();
-
-  if (gameStatus !== 'playing') {
+document.addEventListener('keydown', (e) => {
+  if (game.getStatus() !== 'playing') {
     return;
   }
 
@@ -321,7 +316,7 @@ document.addEventListener('keydown', (keyEvent) => {
     finishAnimation();
   }
 
-  handleMove(keyEvent.key);
+  handleMove(e.key);
 });
 
 render();

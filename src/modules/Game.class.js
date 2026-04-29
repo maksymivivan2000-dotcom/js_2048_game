@@ -349,10 +349,4 @@ class Game {
   }
 }
 
-if (typeof window !== 'undefined') {
-  window.Game = Game;
-}
-
-if (typeof module !== 'undefined') {
-  module.exports = Game;
-}
+export default Game;
