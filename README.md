@@ -49,10 +49,6 @@ npm start
 * Restart functionality
 * Responsive game board
 
-## Demo
-
-https://maksymivivan2000-dotcom.github.io/js_2048_game/
-
 ## Author
 
 Ivan Maksymiv
